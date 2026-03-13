@@ -1,0 +1,140 @@
+
+ **[SYSTEM INSTRUCTIONS: AGENT INITIALIZATION]**
+ 
+
+**Strict Technical Constraints for this Workspace:**
+
+1. **No Web Tech:** Do not generate any Node.js, React, or DOM-based code. This is a 100% native application.
+
+2. **Architecture:** Android UI must be written in Java with XML layouts. All network requests, data parsing, and backend logic must be written in Rust compiled to a `.so` shared library.
+
+3. **Security:** API keys must be injected into the Rust binary at compile-time via environment variables. Do not store keys in `strings.xml` or Java classes.
+
+4. **Concurrency:** All JNI calls from Java must be executed on a background `ExecutorService` to prevent blocking the Android Main/UI thread. UI updates must be posted back via `MainLooper`.
+
+---
+
+**[CONTEXT: PROJECT ARCHITECTURE ROADMAP]**
+We are refactoring a legacy web-based application into a highly performant, fully native Android application.
+
+**1. Environment & Build Configuration:**
+
+* Android project with a nested Rust library (`rust_core`).
+* Android Build (`app/build.gradle`) uses a custom `Exec` task named `buildRust` to run `cargo ndk` for `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64` targets, outputting directly to `src/main/jniLibs`.
+
+**2. The Rust Core (`rust_core/`):**
+
+* `crate-type = ["cdylib"]`.
+* Uses `jni`, `reqwest` (blocking/json features), and `serde_json`.
+* Exposes: `Java_com_jerimie_acrdai_MainActivity_processGeminiPrompt`.
+* Logic: Formats a JSON payload for the Gemini 2.5 Flash API, executes a blocking POST request using the compiled-in API key, parses the response, and returns a `jstring` to Java.
+
+**3. The Android UI (XML Layouts):**
+
+* `activity_main.xml`: A `ConstraintLayout` with a `RecyclerView` for chat history and a bottom-pinned `LinearLayout` for the `EditText` and send button.
+* `item_chat_message.xml`: A single layout for chat bubbles.
+* `bg_chat_bubble.xml`: A 16dp rounded corner shape drawable.
+
+**4. The Java Frontend (`com.jerimie.acrdai`):**
+
+* `ChatMessage.java`: Data model containing text and an `isUser` boolean.
+* `ChatAdapter.java`: Dynamically shifts bubble gravity (END for user, START for AI) and colors based on the sender.
+* `MainActivity.java`: Manages the `RecyclerView`, loads the `rust_core` library, and handles the background threading for the JNI execution.
+
+---
+
+**[CONTEXT: DIRECTORY STRUCTURE]**
+Ensure all generated code perfectly matches this file tree.
+
+```text
+ACRD-AI/
+├── build.gradle                 
+├── settings.gradle              
+├── gradle.properties            
+│
+├── rust_core/                   
+│   ├── Cargo.toml               
+│   └── src/
+│       └── lib.rs               
+│
+└── app/                         
+    ├── build.gradle             
+    ├── proguard-rules.pro
+    │
+    └── src/
+        └── main/
+            ├── AndroidManifest.xml
+            │
+            ├── java/com/jerimie/acrdai/
+            │   ├── MainActivity.java    
+            │   ├── ChatAdapter.java     
+            │   └── ChatMessage.java     
+            │
+            ├── jniLibs/                 
+            │   ├── arm64-v8a/
+            │   ├── armeabi-v7a/
+            │   ├── x86/
+            │   └── x86_64/
+            │
+            └── res/
+                ├── layout/
+                │   ├── activity_main.xml       
+                │   └── item_chat_message.xml   
+                │
+                ├── drawable/
+                │   └── bg_chat_bubble.xml      
+                │
+                └── values/
+                    ├── colors.xml
+                    ├── strings.xml
+                    └── themes.xml
+
+```
+
+---
+
+**[CONTEXT: ANDROID MANIFEST]**
+Target location: `app/src/main/AndroidManifest.xml`
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jerimie.acrdai">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="ACRD-AI"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+
+```
+
+---
+
+**[TASK REQUEST]**
+Based on the Agent initialization instructions, the architectural roadmap, the directory structure, and the provided Manifest, execute the following build sequence from start to finish:
+
+1. Generate the complete `app/build.gradle` integrating the `cargo-ndk` build task.
+2. Generate the complete `Cargo.toml` and `lib.rs` for the Rust JNI backend.
+3. Generate the exact XML files needed for the UI (`activity_main.xml`, `item_chat_message.xml`, `bg_chat_bubble.xml`).
+4. Generate the complete Java frontend classes (`ChatMessage.java`, `ChatAdapter.java`, and `MainActivity.java`), ensuring thread-safe execution of the native method.
+
+Provide the complete code for each file, clearly labeled with its respective filepath from the directory tree.
